@@ -17,6 +17,17 @@ public static class Utils{
         }
         return buffer;
     }
+    
+    // Display the byte array in a readable format.
+    public static void PrintByteArray(byte[] array)
+    {
+        for (int i = 0; i < array.Length; i++)
+        {
+            Console.Write($"{array[i]:X2}");
+            if ((i % 4) == 3) Console.Write(" ");
+        }
+        Console.WriteLine();
+    }
 }
 
 public static class Debug {
