@@ -19,14 +19,13 @@ public static class Utils{
     }
     
     // Display the byte array in a readable format.
-    public static void PrintByteArray(byte[] array)
-    {
-        for (int i = 0; i < array.Length; i++)
-        {
-            Console.Write($"{array[i]:X2}");
-            if ((i % 4) == 3) Console.Write(" ");
+    public static void PrintByteArray(byte[] array) {
+        string cache = string.Empty;
+        for (int i = 0; i < array.Length; i++) {
+            cache += array[i];
+            if ((i % 4) == 3) cache += " ";
         }
-        Console.WriteLine();
+        Console.WriteLine(cache);
     }
 }
 

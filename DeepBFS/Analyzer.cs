@@ -4,35 +4,38 @@ using System.Text.Json;
 namespace DeepBFS;
 
 public class Analyzer {
-    readonly Dictionary<string, List<string>> _fil = new();
-    
+    Dictionary<string, List<string>> _fil = new();
+
     public void Analyze(string target) {
-        ThreadPool.SetMaxThreads(100,100);
         if (Directory.Exists(target)) {
-            AnalyzeCallback(target);
+            Scanner scanner = new();
+            scanner.Scan(target);
+            List<string> files = scanner.GetFiles();
+            Calculator calculator = new();
+            calculator.DoCalc(files);
+            _fil = calculator.GetResult();
             JsonSerializerOptions o = new JsonSerializerOptions()
             {
                 WriteIndented = true,
             };
             File.WriteAllText("./dump.json", JsonSerializer.Serialize(_fil ,o));
         }
-        else if (File.Exists(target)) {
-            if (Path.GetExtension(target) == ".zip") {
-                
-            }
-            else {
-                
-            }
-        }
+    }
+}
+
+class Scanner {
+    readonly List<string> _files = new();
+
+    public List<string> GetFiles() {
+        return _files;
     }
 
-    void AnalyzeCallback(string target) {
-        AnalyzeDir(target);
+    public void Scan(string target) {
+        ScanDir(target);
         try {
             var dirs = Directory.GetDirectories(target);
             foreach (var dir in dirs) {
-                //ThreadPool.QueueUserWorkItem((d) => { AnalyzeCallback(dir); });
-                AnalyzeCallback(dir);
+                Scan(dir);
             }
         }
         catch (Exception e) {
@@ -40,47 +43,67 @@ public class Analyzer {
         }
     }
 
-    void AnalyzeDir(string target) {
-        // Create a DirectoryInfo object representing the specified directory.
+    private void ScanDir(string target) {
         var dir = new DirectoryInfo(target);
-        // Get the FileInfo objects for every file in the directory.
         FileInfo[] files = dir.GetFiles();
-        // Initialize a SHA256 hash object.
-        using SHA256 mySha256 = SHA256.Create();
-        // Compute and print the hash values for each file in directory.
         foreach (FileInfo fInfo in files) {
             try {
-                using FileStream fileStream = fInfo.Open(FileMode.Open);
-                // Create a fileStream for the file.
-                // Be sure it's positioned to the beginning of the stream.
-                fileStream.Position = 0;
-                // Compute the hash of the fileStream.
-                byte[] hashValue = mySha256.ComputeHash(fileStream);
-                // Write the name and hash value of the file to the console.
-                Console.Write($"{fInfo.Name}: ");
-                Utils.PrintByteArray(hashValue);
-                string hexHash = Convert.ToHexString(hashValue);
-                if (_fil.TryGetValue(hexHash, out var value)) {
-                    value.Add(fInfo.FullName);
-                }
-                else {
-                    List<string> nl =
-                    [
-                        fInfo.FullName
-                    ];
-                    _fil.Add(hexHash, nl);
-                }
-            }
-            catch (IOException e) {
-                Console.WriteLine($"I/O Exception: {e.Message}");
-            }
-            catch (UnauthorizedAccessException e) {
-                Console.WriteLine($"Access Exception: {e.Message}");
+                _files.Add(fInfo.FullName);
+                Console.WriteLine($"{fInfo.Name}: {fInfo.FullName}");
             }
             catch (Exception e) {
-                Console.WriteLine($"Unknown Exception: {e.Message}");
+                Console.WriteLine($"Exception: {e.Message}");
             }
         }
-        GC.Collect();
+    }
+}
+
+class Calculator {
+    readonly Dictionary<string, List<string>> _solve = new();
+
+    public void DoCalc(List<string> files) {
+        ThreadPool.SetMaxThreads(10, 10);
+        long bTaskC = ThreadPool.CompletedWorkItemCount;
+        foreach (var t in files) {
+            //DoCalcWork(t);
+            ThreadPool.QueueUserWorkItem((s)=> { DoCalcWork(t); });
+        }
+        while (ThreadPool.CompletedWorkItemCount < bTaskC + files.Count) { }
+    }
+    
+    void DoCalcWork(string t) {
+        try {
+            using SHA256 mySha256 = SHA256.Create();
+            FileInfo fInfo = new FileInfo(t);
+            using FileStream fileStream = fInfo.Open(FileMode.Open);
+            fileStream.Position = 0;
+            byte[] hashValue = mySha256.ComputeHash(fileStream);
+            Console.Write($"{fInfo.Name}: ");
+            Utils.PrintByteArray(hashValue);
+            string hexHash = Convert.ToHexString(hashValue);
+            if (_solve.TryGetValue(hexHash, out var value)) {
+                value.Add(fInfo.FullName);
+            }
+            else {
+                List<string> nl =
+                [
+                    fInfo.FullName
+                ];
+                _solve.Add(hexHash, nl);
+            }
+        }
+        catch (IOException e) {
+            Console.WriteLine($"I/O Exception: {e.Message}");
+        }
+        catch (UnauthorizedAccessException e) {
+            Console.WriteLine($"Access Exception: {e.Message}");
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Unknown Exception: {e.Message}");
+        }
+    }
+
+    public Dictionary<string, List<string>> GetResult() {
+        return _solve;
     }
 }
