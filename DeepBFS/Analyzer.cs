@@ -14,8 +14,7 @@ public class Analyzer {
             Calculator calculator = new();
             calculator.DoCalc(files);
             _fil = calculator.GetResult();
-            JsonSerializerOptions o = new JsonSerializerOptions()
-            {
+            JsonSerializerOptions o = new JsonSerializerOptions() {
                 WriteIndented = true,
             };
             File.WriteAllText("./dump.json", JsonSerializer.Serialize(_fil ,o));
@@ -60,15 +59,17 @@ class Scanner {
 
 class Calculator {
     readonly Dictionary<string, List<string>> _solve = new();
-
+    long _bTaskC;
+    int _fc;
     public void DoCalc(List<string> files) {
-        ThreadPool.SetMaxThreads(10, 10);
-        long bTaskC = ThreadPool.CompletedWorkItemCount;
+        ThreadPool.SetMaxThreads(50, 50);
+        _bTaskC = ThreadPool.CompletedWorkItemCount;
         foreach (var t in files) {
             //DoCalcWork(t);
-            ThreadPool.QueueUserWorkItem((s)=> { DoCalcWork(t); });
+            ThreadPool.QueueUserWorkItem(_=> { DoCalcWork(t); });
         }
-        while (ThreadPool.CompletedWorkItemCount < bTaskC + files.Count) { }
+        _fc = files.Count;
+        while (ThreadPool.CompletedWorkItemCount < _bTaskC + files.Count) { }
     }
     
     void DoCalcWork(string t) {
@@ -78,7 +79,7 @@ class Calculator {
             using FileStream fileStream = fInfo.Open(FileMode.Open);
             fileStream.Position = 0;
             byte[] hashValue = mySha256.ComputeHash(fileStream);
-            Console.Write($"{fInfo.Name}: ");
+            Console.Write($"[{ThreadPool.CompletedWorkItemCount - _bTaskC}/{_fc}]{fInfo.Name}: ");
             Utils.PrintByteArray(hashValue);
             string hexHash = Convert.ToHexString(hashValue);
             if (_solve.TryGetValue(hexHash, out var value)) {

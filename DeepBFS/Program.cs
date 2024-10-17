@@ -21,6 +21,9 @@ static class Program {
                 Analyzer analyzer = new();
                 analyzer.Analyze(args[1]);
                 break;
+            case "exit":
+                Environment.Exit(0);
+                break;
         }
     }
 }
