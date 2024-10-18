@@ -20,6 +20,25 @@ public class Analyzer {
             File.WriteAllText("./dump.json", JsonSerializer.Serialize(_fil ,o));
         }
     }
+
+    public void Copy(string targetDir) {
+        if (!Directory.Exists(targetDir)) {
+            Directory.CreateDirectory(targetDir);
+        }
+        Console.WriteLine("Saving index...");
+        JsonSerializerOptions o = new JsonSerializerOptions() {
+            WriteIndented = true,
+        };
+        File.WriteAllText(Path.Combine(targetDir,"index.dbf.json"), JsonSerializer.Serialize(_fil ,o));
+        Console.WriteLine($"Copying files to {targetDir}");
+        var x = 0;
+        foreach (var f in _fil) {
+            x += 1;
+            Console.WriteLine($"[{x}/{_fil.Count}][{f.Value.Count}]{f.Key}[{f.Value[0]}]");
+            File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));
+        }
+        Console.WriteLine("Done!");
+    }
 }
 
 class Scanner {
