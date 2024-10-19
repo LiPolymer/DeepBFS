@@ -15,11 +15,16 @@ static class Program {
         }
     }
 
+    static Analyzer _analyzer = new Analyzer();
+    
     static void MainCross(string[] args) {
         switch (args[0]) {
             case "run":
-                Analyzer analyzer = new();
-                analyzer.Analyze(args[1]);
+                _analyzer = new();
+                _analyzer.Analyze(args[1]);
+                break;
+            case "copy":
+                _analyzer.Copy(args[1]);
                 break;
             case "exit":
                 Environment.Exit(0);

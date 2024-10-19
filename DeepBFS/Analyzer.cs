@@ -81,7 +81,7 @@ class Calculator {
     long _bTaskC;
     int _fc;
     public void DoCalc(List<string> files) {
-        ThreadPool.SetMaxThreads(50, 50);
+        ThreadPool.SetMaxThreads(8, 8);
         _bTaskC = ThreadPool.CompletedWorkItemCount;
         foreach (var t in files) {
             //DoCalcWork(t);
