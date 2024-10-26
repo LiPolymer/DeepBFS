@@ -1,5 +1,7 @@
-﻿using System.Security.Cryptography;
+﻿using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace DeepBFS;
 
@@ -21,7 +23,7 @@ public class Analyzer {
         }
     }
 
-    public void Copy(string targetDir) {
+    public void Copy(string targetDir, bool isMultiThread = false) {
         if (!Directory.Exists(targetDir)) {
             Directory.CreateDirectory(targetDir);
         }
@@ -31,13 +33,22 @@ public class Analyzer {
         };
         File.WriteAllText(Path.Combine(targetDir,"index.dbf.json"), JsonSerializer.Serialize(_fil ,o));
         Console.WriteLine($"Copying files to {targetDir}");
-        var x = 0;
-        foreach (var f in _fil) {
-            x += 1;
-            Console.WriteLine($"[{x}/{_fil.Count}][{f.Value.Count}]{f.Key}[{f.Value[0]}]");
-            File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));
+        if (!isMultiThread) {
+            var x = 0;
+            foreach (var f in _fil) {
+                x += 1;
+                Console.WriteLine($"[{x}/{_fil.Count}][{f.Value.Count}]{f.Key}[{f.Value[0]}]");
+                File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));
+            }
+        }
+        else {
+            
         }
         Console.WriteLine("Done!");
+    }
+    
+    void DoCopyWork(string targetDir) {
+        
     }
 }
 
@@ -125,5 +136,23 @@ class Calculator {
 
     public Dictionary<string, List<string>> GetResult() {
         return _solve;
+    }
+}
+
+class ZipAnalyzer {
+    public void Analyze(string target){
+        using (ZipArchive zf = ZipFile.OpenRead(target)) {
+            using SHA256 mySha256 = SHA256.Create();
+            foreach (var zae in zf.Entries) {
+                Console.WriteLine(zae.FullName);
+                byte[] hashValue = mySha256.ComputeHash(zae.Open());
+                Utils.PrintByteArray(hashValue);
+                string hexHash = Convert.ToHexString(hashValue);
+            }
+            //var jo = new JsonSerializerOptions {
+            //    WriteIndented = true,
+            //};
+            //File.WriteAllText("./zip.json",JsonSerializer.Serialize(zf.Entries,jo));
+        }
     }
 }
