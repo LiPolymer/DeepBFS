@@ -23,6 +23,10 @@ public class Analyzer {
         }
     }
 
+    public int Length() {
+        return _fil.Count;
+    }
+    
     public void Copy(string targetDir, bool isMultiThread = false) {
         if (!Directory.Exists(targetDir)) {
             Directory.CreateDirectory(targetDir);
@@ -38,7 +42,21 @@ public class Analyzer {
             foreach (var f in _fil) {
                 x += 1;
                 Console.WriteLine($"[{x}/{_fil.Count}][{f.Value.Count}]{f.Key}[{f.Value[0]}]");
-                File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));
+                if (f.Value[0].Contains('|')) {
+                    string[] fd = f.Value[0].Split('|');
+                    try {
+                        using ZipArchive za = ZipFile.OpenRead(fd[0]);
+                        ZipArchiveEntry? ze = za.GetEntry(fd[1]);
+                        ze?.ExtractToFile(Path.Combine(targetDir,f.Key));
+                    }
+                    catch (Exception e) {
+                        Console.WriteLine(e);
+                    }
+                }
+                else {
+                    File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));  
+                }
+
             }
         }
         else {
@@ -103,56 +121,69 @@ class Calculator {
     }
     
     void DoCalcWork(string t) {
-        try {
-            using SHA256 mySha256 = SHA256.Create();
-            FileInfo fInfo = new FileInfo(t);
-            using FileStream fileStream = fInfo.Open(FileMode.Open);
-            fileStream.Position = 0;
-            byte[] hashValue = mySha256.ComputeHash(fileStream);
-            Console.Write($"[{ThreadPool.CompletedWorkItemCount - _bTaskC}/{_fc}]{fInfo.Name}: ");
-            Utils.PrintByteArray(hashValue);
-            string hexHash = Convert.ToHexString(hashValue);
-            if (_solve.TryGetValue(hexHash, out var value)) {
-                value.Add(fInfo.FullName);
+        if (t.EndsWith(".zip")) {
+            try {
+                using ZipArchive zf = ZipFile.OpenRead(t);
+                CalcZip(zf,t);
+            }            
+            catch (Exception e) {
+                Console.WriteLine($"Unknown Exception: {e.Message}");
             }
-            else {
-                List<string> nl =
-                [
-                    fInfo.FullName
-                ];
-                _solve.Add(hexHash, nl);
+        } else {
+            try {
+                using SHA256 mySha256 = SHA256.Create();
+                FileInfo fInfo = new FileInfo(t);
+                using FileStream fileStream = fInfo.Open(FileMode.Open);
+                fileStream.Position = 0;
+                byte[] hashValue = mySha256.ComputeHash(fileStream);
+                Console.Write($"[{ThreadPool.CompletedWorkItemCount - _bTaskC}/{_fc}]{fInfo.Name}: ");
+                Utils.PrintByteArray(hashValue);
+                string hexHash = Convert.ToHexString(hashValue);
+                if (_solve.TryGetValue(hexHash, out var value)) {
+                    value.Add(fInfo.FullName);
+                }
+                else {
+                    List<string> nl =
+                    [
+                        fInfo.FullName
+                    ];
+                    _solve.Add(hexHash, nl);
+                }
             }
-        }
-        catch (IOException e) {
-            Console.WriteLine($"I/O Exception: {e.Message}");
-        }
-        catch (UnauthorizedAccessException e) {
-            Console.WriteLine($"Access Exception: {e.Message}");
-        }
-        catch (Exception e) {
-            Console.WriteLine($"Unknown Exception: {e.Message}");
+            catch (IOException e) {
+                Console.WriteLine($"I/O Exception: {e.Message}");
+            }
+            catch (UnauthorizedAccessException e) {
+                Console.WriteLine($"Access Exception: {e.Message}");
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Unknown Exception: {e.Message}");
+            }
         }
     }
 
     public Dictionary<string, List<string>> GetResult() {
         return _solve;
     }
-}
 
-class ZipAnalyzer {
-    public void Analyze(string target){
-        using (ZipArchive zf = ZipFile.OpenRead(target)) {
-            using SHA256 mySha256 = SHA256.Create();
-            foreach (var zae in zf.Entries) {
-                Console.WriteLine(zae.FullName);
-                byte[] hashValue = mySha256.ComputeHash(zae.Open());
-                Utils.PrintByteArray(hashValue);
-                string hexHash = Convert.ToHexString(hashValue);
+    void CalcZip(ZipArchive zf, string path) {
+        using SHA256 mySha256 = SHA256.Create();
+        foreach (var zae in zf.Entries) {
+            Console.WriteLine("[ZIP]" + path + "|" + zae.FullName);
+            byte[] hashValue = mySha256.ComputeHash(zae.Open());
+            Utils.PrintByteArray(hashValue);
+            string hexHash = Convert.ToHexString(hashValue);
+            string fi = path + "|" + zae.FullName;
+            if (_solve.TryGetValue(hexHash, out var value)) {
+                value.Add(fi);
             }
-            //var jo = new JsonSerializerOptions {
-            //    WriteIndented = true,
-            //};
-            //File.WriteAllText("./zip.json",JsonSerializer.Serialize(zf.Entries,jo));
+            else {
+                List<string> nl =
+                [
+                    fi
+                ];
+                _solve.Add(hexHash, nl);
+            }
         }
     }
 }

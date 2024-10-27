@@ -26,9 +26,8 @@ static class Program {
             case "copy":
                 _analyzer.Copy(args[1]);
                 break;
-            case "azp":
-                var za = new ZipAnalyzer();
-                za.Analyze(args[1]);
+            case "len":
+                Console.WriteLine(_analyzer.Length());
                 break;
             case "exit":
                 Environment.Exit(0);
