@@ -1,7 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Xml.Linq;
 
 namespace DeepBFS;
 
@@ -9,18 +8,24 @@ public class Analyzer {
     Dictionary<string, List<string>> _fil = new();
 
     public void Analyze(string target) {
-        if (Directory.Exists(target)) {
-            Scanner scanner = new();
-            scanner.Scan(target);
-            List<string> files = scanner.GetFiles();
-            Calculator calculator = new();
-            calculator.DoCalc(files);
-            _fil = calculator.GetResult();
-            JsonSerializerOptions o = new JsonSerializerOptions() {
-                WriteIndented = true,
-            };
-            File.WriteAllText("./dump.json", JsonSerializer.Serialize(_fil ,o));
-        }
+        if (!Directory.Exists(target)&!File.Exists(target)) return;
+        Scanner scanner = new();
+        scanner.Scan(target);
+        List<string> files = scanner.GetFiles();
+        Calculator calculator = new();
+        calculator.DoCalc(files);
+        _fil = calculator.GetResult();
+        JsonSerializerOptions o = new() {
+            WriteIndented = true
+        };
+        File.WriteAllText("./dump.json", JsonSerializer.Serialize(_fil ,o));
+        GC.Collect();
+    }
+
+    public void Load(string index) {
+        Dictionary<string, List<string>>? li = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(index);
+        if (li == null) return;
+        _fil = li;
     }
 
     public int Length() {
@@ -56,7 +61,6 @@ public class Analyzer {
                 else {
                     File.Copy(f.Value[0],Path.Combine(targetDir,f.Key));  
                 }
-
             }
         }
         else {
@@ -78,6 +82,10 @@ class Scanner {
     }
 
     public void Scan(string target) {
+        if (File.Exists(target) & target.EndsWith(".zip")) {
+            _files.Add(target);
+            return;
+        }
         ScanDir(target);
         try {
             var dirs = Directory.GetDirectories(target);
@@ -110,7 +118,7 @@ class Calculator {
     long _bTaskC;
     int _fc;
     public void DoCalc(List<string> files) {
-        ThreadPool.SetMaxThreads(8, 8);
+        ThreadPool.SetMaxThreads(6, 6);
         _bTaskC = ThreadPool.CompletedWorkItemCount;
         foreach (var t in files) {
             //DoCalcWork(t);
@@ -168,22 +176,23 @@ class Calculator {
 
     void CalcZip(ZipArchive zf, string path) {
         using SHA256 mySha256 = SHA256.Create();
-        foreach (var zae in zf.Entries) {
+        foreach (ZipArchiveEntry zae in zf.Entries) {
+            if (zae.FullName.EndsWith('/')) continue;
             Console.WriteLine("[ZIP]" + path + "|" + zae.FullName);
             byte[] hashValue = mySha256.ComputeHash(zae.Open());
             Utils.PrintByteArray(hashValue);
             string hexHash = Convert.ToHexString(hashValue);
             string fi = path + "|" + zae.FullName;
-            if (_solve.TryGetValue(hexHash, out var value)) {
+            if (_solve.TryGetValue(hexHash, out List<string>? value)) {
                 value.Add(fi);
             }
             else {
-                List<string> nl =
-                [
+                List<string> nl = [
                     fi
                 ];
                 _solve.Add(hexHash, nl);
             }
         }
+        GC.Collect();
     }
 }

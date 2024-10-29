@@ -22,7 +22,7 @@ public static class Utils{
     public static void PrintByteArray(byte[] array) {
         string cache = string.Empty;
         for (int i = 0; i < array.Length; i++) {
-            cache += array[i];
+            cache += array[i].ToString("X");
             if ((i % 4) == 3) cache += " ";
         }
         Console.WriteLine(cache);

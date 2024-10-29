@@ -29,6 +29,13 @@ static class Program {
             case "len":
                 Console.WriteLine(_analyzer.Length());
                 break;
+            case "load":
+                Console.WriteLine("Loading...");
+                _analyzer = new Analyzer();
+                if (!File.Exists(args[1])) return;
+                _analyzer.Load(File.ReadAllText(args[1]));
+                Console.WriteLine("Done!");
+                break;
             case "exit":
                 Environment.Exit(0);
                 break;
